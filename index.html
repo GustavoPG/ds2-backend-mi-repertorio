@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <link rel="icon" type="image/x-icon"
+    href="https://www.shareicon.net/data/128x128/2017/01/18/873233_network_512x512.png">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+    integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      text-align: center;
+      background: #283593;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="AgregarCancion">
+    <h2 class="pt-3">&#119070; Mi repertorio &#119070;</h2>
+
+    <div class="container pt-5 w-50">
+      <div>
+        <div class="form-group row">
+          <label for="name" class="col-sm-2 col-form-label">Canción:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="cancion" placeholder="A dios le pido" />
+          </div>
+        </div>
+        <div class="form-group row">
+          <label for="email" class="col-sm-2 col-form-label">Artista: </label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="artista" placeholder="Juanes" />
+          </div>
+        </div>
+        <div class="form-group row">
+          <label for="rut" class="col-sm-2 col-form-label">Tono:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="tono" placeholder="Em" />
+          </div>
+        </div>
+        <button onclick="nuevaCancion(event)" id="agregar" class="m-auto btn btn-success col-sm-10">
+          Agregar
+        </button>
+        <button id="editar" class="m-auto btn btn-info col-sm-10" style="display:none;">
+          Editar
+        </button>
+      </div>
+    </div>
+  </div>
+  <div id="ListaCanciones">
+    <hr />
+    <hr />
+    <h2>Tabla de canciones &#127908;</h2>
+
+    <div class="container pt-5 w-75">
+      <table class="table table-dark">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Canción</th>
+            <th scope="col">Artista</th>
+            <th scope="col">Tono</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let url = "/canciones";
+    let tbody = document.getElementById("cuerpo");
+    let cancion = document.getElementById("cancion");
+    let artista = document.getElementById("artista");
+    let tono = document.getElementById("tono");
+
+    let canciones = [];
+    window.onload = getData;
+
+    async function getData() {
+      try {
+        const response = await axios.get(url);
+        canciones = response.data;
+        tbody.innerHTML = "";
+        console.log(canciones)
+        document.getElementById("agregar").style.display = "block";
+        document.getElementById("editar").style.display = "none";
+        canciones.forEach((c, i) => {
+          tbody.innerHTML += `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${c.titulo}</td>
+            <td>${c.artista}</td>
+            <td>${c.tono}</td>
+            <td>
+              <button class="btn btn-warning" onclick="prepararCancion(${i},'${c.id}')">Editar</button>
+              <button class="btn btn-danger" onclick="eliminarCancion(${i},'${c.id}')">Eliminar</button>
+            </td>
+          </tr>
+        `;
+        });
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: '¡Atención!',
+          text: 'Error al obtener los datos'
+        });
+      }
+      cancion.value = "";
+      artista.value = "";
+      tono.value = "";
+    }
+
+    function nuevaCancion() {
+      if (!validarDatos()) {
+        return false;
+      }
+      const id = Math.floor(Math.random() * 9999);
+      let data = {
+        id,
+        titulo: cancion.value.trim(),
+        artista: artista.value.trim(),
+        tono: tono.value.trim(),
+      };
+      console.log(data);
+      axios.post(url, data).then(() => getData()).catch(error => {
+        Swal.fire({
+          icon: 'error',
+          title: '¡Atención!',
+          text: 'Error al agregar la canción'
+        });
+      });
+    }
+
+    function prepararCancion(i, id) {
+      cancion.value = canciones[i].titulo;
+      artista.value = canciones[i].artista;
+      tono.value = canciones[i].tono;
+      document.getElementById("editar").setAttribute("onclick", `editarCancion('${id}')`);
+      document.getElementById("agregar").style.display = "none";
+      document.getElementById("editar").style.display = "block";
+    }
+
+    function eliminarCancion(i, id) {
+      Swal.fire({
+        title: "¿Desea eliminar canción " + canciones[i].titulo + "?",
+        icon: "question",
+        iconHtml: "🎜",
+        confirmButtonText: "Si, eliminar",
+        cancelButtonText: "Cancelar",
+        showCancelButton: true,
+        showCloseButton: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          axios.delete(url + "/" + id).then(() => {
+            Swal.fire({
+              icon: 'success',
+              title: '¡Atención!',
+              text: "Canción " + canciones[i].titulo + " eliminada"
+            });
+            getData();
+          }).catch(error => {
+            Swal.fire({
+              icon: 'error',
+              title: '¡Atención!',
+              text: 'Error al eliminar la canción, ' + error
+            });
+          });
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          return false;
+        }
+      });
+    }
+
+    function editarCancion(id) {
+      if (!validarDatos()) {
+        return false;
+      }
+      axios.put(url + "/" + id, {
+        id,
+        titulo: cancion.value,
+        artista: artista.value,
+        tono: tono.value,
+      }).then(() => {
+        getData();
+        document.getElementById("agregar").style.display = "block";
+        document.getElementById("editar").style.display = "none";
+        Swal.fire({
+          icon: 'success',
+          title: '¡Atención!',
+          text: "¡Canción actualizada!"
+        });
+      }).catch(error => {
+        Swal.fire({
+          icon: 'error',
+          title: '¡Atención!',
+          text: 'Error al editar la canción, ' + error
+        });
+      });
+    }
+
+    const validarDatos = () => {
+      if (cancion.value.trim() === "") {
+        Swal.fire({
+          icon: 'warning',
+          title: '¡Atención!',
+          text: 'Debe ingresar una canción',
+          didClose: () => {
+            cancion.value = '';
+            cancion.focus();
+          }
+        });
+        return false;
+      }
+      if (artista.value.trim() === "") {
+        Swal.fire({
+          icon: 'warning',
+          title: '¡Atención!',
+          text: 'Debe ingresar artista',
+          didClose: () => {
+            artista.value = '';
+            artista.focus();
+          }
+        });
+        return false;
+      }
+      if (tono.value.trim() === "") {
+        Swal.fire({
+          icon: 'warning',
+          title: '¡Atención!',
+          text: 'Debe ingresar tono',
+          didClose: () => {
+            tono.value = '';
+            tono.focus();
+          }
+        });
+        return false;
+      }
+      return true;
+    };
+  </script>
+</body>
+</html>
